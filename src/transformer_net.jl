@@ -7,11 +7,11 @@ mutable struct TransformerNet <: model
 end
 
 function TransformerNet()
-    top_layers = Chain(ConvBlock(3=>32, (3,3), (1,1)),
+    top_layers = Chain(ConvBlock(3=>32, (3,3)),
                     InstanceNorm(32), x->relu.(x),
-                    ConvBlock(32=>64, (3,3), (1,1)),
+                    ConvBlock(32=>64, (3,3), (2,2)),
                     InstanceNorm(64), x->relu.(x),
-                    ConvBLock(64=>128, (3,3), (1,1)),
+                    ConvBLock(64=>128, (3,3), (2,2)),
                     InstanceNorm(128), x->relu.(x))
     residual_layers = Chain([ResidualBlock(128) for i in 1:5]...)
     upsampling_layers = Chain(UpsamplingBlock(128=>64, (3,3), (1,1), 2),

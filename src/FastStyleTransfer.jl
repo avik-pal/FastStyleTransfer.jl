@@ -2,6 +2,9 @@ module FastStyleTransfer
 
 using Flux, Metalhead
 using FileIO, Images
+using BSON: @save, @load
+
+export train, stylize, stylize_all
 
 abstract type model end
 abstract type layers end
