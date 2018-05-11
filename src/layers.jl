@@ -48,8 +48,8 @@ end
 
 Flux.treelike(ConvBlock)
 
-function ConvBlock(chs::Pair{<:Int,<:Int}, kernel::Tuple{Int,Int}, stride::Tuple{Int,Int})
-    ConvBlock(ReflectionPad(kernel[1]÷2), Conv(kernel, chs, stride = stride))
+function ConvBlock(chs::Pair{<:Int,<:Int}, kernel::Tuple{Int,Int}, stride::Tuple{Int,Int} = (1,1), pad::Tuple{Int,Int} = (0,0))
+    ConvBlock(ReflectionPad(kernel[1]÷2), Conv(kernel, chs, stride = stride, pad = pad))
 end
 
 function (c::ConvBlock)(x)
@@ -58,17 +58,26 @@ end
 
 #----------------------------------------------------------------------------------------------------------------
 
-mutable struct ConvTranspose <: layers
+mutable struct Upsample{T} <: layers
+    scale_factor::T
 end
 
-Flux.treelike(ConvTranspose)
+Flux.treelike(Upsample)
 
 #----------------------------------------------------------------------------------------------------------------
 
 mutable struct UpsamplingBlock <: block
     upsample
-    norm
+    pad
     conv
 end
 
 Flux.treelike(UpsamplingBlock)
+
+function UpsamplingBlock(chs::Pair{<:Int,<:Int}, kernel::Tuple{Int,Int}, stride::Tuple{Int,Int}, upsample::Int, pad::Tuple{Int,Int} = (0,0))
+    UpsamplingBlock(Upsample(upsample), ReflectionPad(kernel[1]÷2), Conv(kernel, chs, stride = stride, pad = pad))
+end
+
+function (u::UpsamplingBlock)(x)
+    u.conv(u.pad(u.upsample(x)))
+end
