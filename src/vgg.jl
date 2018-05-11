@@ -1,6 +1,6 @@
 # The license for this code is available at https://github.com/avik-pal/FastStyleTransfer.jl/blob/master/LICENSE.md
 
-mutable struct vgg19
+mutable struct vgg19 <: model
     slice1
     slice2
     slice3

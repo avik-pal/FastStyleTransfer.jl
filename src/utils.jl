@@ -20,7 +20,7 @@ function load_image(filename; size::Int = -1, scale::Int = -1)
     img = reshape(img, (size(img, 2), size(img, 1), 3, 1))
 end
 
-function save_image(filename, img, display::Bool = true)    
+function save_image(filename, img, display::Bool = true)
     img = reshape(img, (size(img, 2), size(img, 1), 3))
     img = permutedims(img, [3,1,2])
     # Denormalize the data
@@ -39,7 +39,7 @@ end
 
 function gram_matrix(x)
     # The batch size is known to be 1
-    w, h, ch, _ = size(x)    
+    w, h, ch, _ = size(x)
     local features = reshape(x, w*h, ch)
     At_mul_B(features, features) / (w * h * ch)
 end
