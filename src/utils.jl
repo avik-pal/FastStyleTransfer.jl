@@ -1,6 +1,10 @@
 # The license for this code is available at https://github.com/avik-pal/FastStyleTransfer.jl/blob/master/LICENSE.md
 
-# The image returned is scaled to equal dimensions on both side
+##################################################################
+# Utility Functions                                              #
+##################################################################
+
+# NOTE: The image returned is scaled to equal dimensions on both side
 function load_image(filename; size::Int = -1, scale::Int = -1)
     img = load(filename)
     if(size != -1)
@@ -37,11 +41,13 @@ function save_image(filename, img, display::Bool = true)
     end
 end
 
+function load_dataset()
+end
+
 function gram_matrix(x)
-    # The batch size is known to be 1
-    w, h, ch, _ = size(x)
-    local features = reshape(x, w*h, ch)
-    At_mul_B(features, features) / (w * h * ch)
+    w, h, ch, b = size(x)
+    local features = reshape(x, w*h, ch, b)
+    [At_mul_B(features[:,:,i], features[:,:,i]) / (w * h * ch) for i in 1:b]
 end
 
 function normalize_batch(x)
