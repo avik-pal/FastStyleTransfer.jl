@@ -70,11 +70,13 @@ end
 # Upsample                                                       #
 ##################################################################
 
-mutable struct Upsample{T} <: layers
-    scale_factor::T
-end
+# TODO: Write a more general function to allow any form of upsampling
 
-Flux.treelike(Upsample)
+Upsample(x) = repeat(x, inner = (2,2,1,1))
+
+Upsample(x::TrackedArray) = Tracker.track(Upsample, x)
+
+Tracker.back(::typeof(Upsample), Δ, x) = Tracker.@back(x, maxpool(Δ, (2,2), stride = (2,2)))
 
 ##################################################################
 # Upsampling BLock                                               #
@@ -89,7 +91,7 @@ end
 Flux.treelike(UpsamplingBlock)
 
 function UpsamplingBlock(chs::Pair{<:Int,<:Int}, kernel::Tuple{Int,Int}, stride::Tuple{Int,Int}, upsample::Int, pad::Tuple{Int,Int} = (0,0))
-    UpsamplingBlock(Upsample(upsample), ReflectionPad(kernel[1]÷2), Conv(kernel, chs, stride = stride, pad = pad))
+    UpsamplingBlock(Upsample, ReflectionPad(kernel[1]÷2), Conv(kernel, chs, stride = stride, pad = pad))
 end
 
 function (u::UpsamplingBlock)(x)
