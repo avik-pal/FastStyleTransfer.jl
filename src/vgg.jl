@@ -1,10 +1,6 @@
 # The license for this code is available at https://github.com/avik-pal/FastStyleTransfer.jl/blob/master/LICENSE.md
 
-# TODO: Add support for VGG16
-
-##################################################################
-# VGG19                                                          #
-##################################################################
+#-----------------------------VGG19-----------------------------------
 
 mutable struct vgg19 <: model
     slice1

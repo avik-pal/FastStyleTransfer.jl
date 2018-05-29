@@ -1,8 +1,6 @@
 # The license for this code is available at https://github.com/avik-pal/FastStyleTransfer.jl/blob/master/LICENSE.md
 
-##################################################################
-# Utilities to Train new models                                  #
-##################################################################
+#------------------------Utilities to Train new models----------------------------
 
 function train(train_data_path, batch_size, η, style_image_path, epochs, model_save_path, content_weight, style_weight)
     train_dataset = load_dataset(train_data_path, batch_size) |> gpu
@@ -49,9 +47,7 @@ function train(train_data_path, batch_size, η, style_image_path, epochs, model_
     @save "model_save_path" transformer
 end
 
-##################################################################
-# Utilities to Stylize Images                                    #
-##################################################################
+#----------------------------------Utilities to Stylize Images--------------------------------
 
 function stylize(image_path, model_path = "../models/trained_network_1.bson"; save_path = None, display::Bool = true)
     info("Starting to Load Model")

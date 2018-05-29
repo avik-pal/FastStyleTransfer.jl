@@ -1,10 +1,7 @@
 # The license for this code is available at https://github.com/avik-pal/FastStyleTransfer.jl/blob/master/LICENSE.md
 
-##################################################################
-# InstanceNorm                                                   #
-##################################################################
+#-------------------Instance Normalization-----------------------------------
 
-# TODO: Use moving mean and std at test time
 mutable struct InstanceNorm <: layers
     β
     γ
@@ -15,11 +12,11 @@ Flux.treelike(InstanceNorm)
 
 InstanceNorm(chs::Int; initβ = zeros, initγ = ones, ϵ = 1.0e-8) = InstanceNorm(param(initβ(chs)), param(initγ(chs)), ϵ)
 
+# std(x, 4) is a current bottleneck on GPU
+
 (IN::InstanceNorm)(x) = reshape(IN.γ, (1,1,IN.chs,1) .* ((x .- mean(x, 4)) ./ std(x, 4)) .+ reshape(IN.β, (1,1,IN.chs,1))
 
-##################################################################
-# Residual Block                                                 #
-##################################################################
+#---------------------------Residual Block-----------------------------------
 
 mutable struct ResidualBlock <: block
     conv_layers
@@ -37,9 +34,7 @@ function (r::ResidualBlock)(x)
     r.norm_layers[2](r.conv_layers[2](value)) + x
 end
 
-##################################################################
-# Reflection Pad                                                 #
-##################################################################
+#--------------------------Reflection Pad-------------------------------------
 
 mutable struct ReflectionPad <: layers
     dim::Int
@@ -47,9 +42,7 @@ end
 
 Flux.treelike(ReflectionPad)
 
-##################################################################
-# Convolution Block                                              #
-##################################################################
+#----------------------Convolution Block--------------------------------------
 
 mutable struct ConvBlock <: block
     pad
@@ -66,11 +59,7 @@ function (c::ConvBlock)(x)
     c.conv(c.pad(x))
 end
 
-##################################################################
-# Upsample                                                       #
-##################################################################
-
-# TODO: Write a more general function to allow any form of upsampling
+#-------------------------Upsample--------------------------------------------
 
 Upsample(x) = repeat(x, inner = (2,2,1,1))
 
@@ -78,9 +67,7 @@ Upsample(x::TrackedArray) = Tracker.track(Upsample, x)
 
 Tracker.back(::typeof(Upsample), Δ, x) = Tracker.@back(x, maxpool(Δ, (2,2), stride = (2,2)))
 
-##################################################################
-# Upsampling BLock                                               #
-##################################################################
+#----------------------Upsampling BLock---------------------------------------
 
 mutable struct UpsamplingBlock <: block
     upsample

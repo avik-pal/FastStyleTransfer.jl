@@ -1,8 +1,6 @@
 # The license for this code is available at https://github.com/avik-pal/FastStyleTransfer.jl/blob/master/LICENSE.md
 
-##################################################################
-# Transformer Net                                                #
-##################################################################
+#-----------------------------Transformer Net--------------------------------------
 
 mutable struct TransformerNet <: model
     top_layers
