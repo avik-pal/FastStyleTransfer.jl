@@ -12,9 +12,12 @@ Flux.treelike(InstanceNorm)
 
 InstanceNorm(chs::Int; initβ = zeros, initγ = ones, ϵ = 1.0e-8) = InstanceNorm(param(initβ(chs)), param(initγ(chs)), ϵ)
 
-# std(x, 4) is a current bottleneck on GPU
-
-(IN::InstanceNorm)(x) = reshape(IN.γ, (1,1,IN.chs,1) .* ((x .- mean(x, 4)) ./ std(x, 4)) .+ reshape(IN.β, (1,1,IN.chs,1))
+# NOTE: Calculating the std on cpu is much faster
+function (IN::InstanceNorm)(x)
+    local chs = length(IN.β.data)
+    ẋ = reshape(x, :, size(x,4))
+    reshape(IN.γ, (1,1,chs,1)) .* ((x .- mean(ẋ, 1)) ./ std(ẋ, 1)) .+ reshape(IN.β, (1,1,chs,1))
+end
 
 #---------------------------Residual Block-----------------------------------
 
@@ -36,30 +39,34 @@ end
 
 #--------------------------Reflection Pad-------------------------------------
 
-mutable struct ReflectionPad <: layers
-    dim::Int
-end
+# Paper suggests using Reflection Padding. However normal padding is being used until this layer is implemented
 
-Flux.treelike(ReflectionPad)
+# mutable struct ReflectionPad <: layers
+#     dim::Int
+# end
+
+# Flux.treelike(ReflectionPad)
 
 #----------------------Convolution Block--------------------------------------
 
 mutable struct ConvBlock <: block
-    pad
+    # pad
     conv
 end
 
 Flux.treelike(ConvBlock)
 
 function ConvBlock(chs::Pair{<:Int,<:Int}, kernel::Tuple{Int,Int}, stride::Tuple{Int,Int} = (1,1), pad::Tuple{Int,Int} = (0,0))
-    ConvBlock(ReflectionPad(kernel[1]÷2), Conv(kernel, chs, stride = stride, pad = pad))
+    # ConvBlock(ReflectionPad(kernel[1]÷2), Conv(kernel, chs, stride = stride, pad = pad))
+    ConvBlock(Conv(kernel, chs, stride = stride, pad = (kernel[1]÷2, kernel[2]÷2)))
 end
 
-function (c::ConvBlock)(x)
-    c.conv(c.pad(x))
-end
+# (c::ConvBlock)(x) = c.conv(c.pad(x))
+(c::ConvBlock)(x) = c.conv(x)
 
 #-------------------------Upsample--------------------------------------------
+
+# NOTE: There is an unmerged PR in Flux.jl implementing repeat for tracked arrays. Remove this code block once it is merged
 
 Upsample(x) = repeat(x, inner = (2,2,1,1))
 
@@ -69,18 +76,27 @@ Tracker.back(::typeof(Upsample), Δ, x) = Tracker.@back(x, maxpool(Δ, (2,2), st
 
 #----------------------Upsampling BLock---------------------------------------
 
+# TODO: Use reflection padding instead of zero padding once its implemented
+
+# mutable struct UpsamplingBlock <: block
+#     upsample
+#     pad
+#     conv
+# end
+
+# function (u::UpsamplingBlock)(x)
+#     u.conv(u.pad(u.upsample(x)))
+# end
+
+# UpsamplingBlock(chs::Pair{<:Int,<:Int}, kernel::Tuple{Int,Int}, stride::Tuple{Int,Int}, upsample::Int, pad::Tuple{Int,Int} = (0,0)) = UpsamplingBlock(x -> Upsample(x), ReflectionPad(kernel[1]÷2), Conv(kernel, chs, stride = stride, pad = pad))
+
 mutable struct UpsamplingBlock <: block
     upsample
-    pad
     conv
 end
 
 Flux.treelike(UpsamplingBlock)
 
-function UpsamplingBlock(chs::Pair{<:Int,<:Int}, kernel::Tuple{Int,Int}, stride::Tuple{Int,Int}, upsample::Int, pad::Tuple{Int,Int} = (0,0))
-    UpsamplingBlock(Upsample, ReflectionPad(kernel[1]÷2), Conv(kernel, chs, stride = stride, pad = pad))
-end
+UpsamplingBlock(chs::Pair{<:Int,<:Int}, kernel::Tuple{Int,Int}, stride::Tuple{Int,Int}, upsample::Int, pad::Tuple{Int,Int} = (0,0)) = UpsamplingBlock(x -> Upsample(x), Conv(kernel, chs, stride = stride, pad = (kernel[1]÷2, kernel[2]÷2)))
 
-function (u::UpsamplingBlock)(x)
-    u.conv(u.pad(u.upsample(x)))
-end
+(u::UpsamplingBlock)(x) = u.conv(u.upsample(x))

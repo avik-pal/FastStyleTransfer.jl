@@ -1,8 +1,6 @@
 # The license for this code is available at https://github.com/avik-pal/FastStyleTransfer.jl/blob/master/LICENSE.md
 
-##################################################################
-# Utility Functions                                              #
-##################################################################
+#-----------------------Utilities to load and save image---------------------------
 
 # NOTE: The image returned is scaled to equal dimensions on both side
 function load_image(filename; size::Int = -1, scale::Int = -1)
@@ -31,7 +29,7 @@ function save_image(filename, img, display::Bool = true)
     mean = [123.68, 116.779, 103.939]
     std = [58.624, 57.334, 57.6]
     for i in 1:3
-        img[i,:,:] = (img[i,:,:] + mean[i]) * std[i]
+        img[i,:,:] = img[i,:,:] * std[i] + mean[i]
     end
     img = clamp.(img, 0, 255) / 255
     img = colorview(RGB{Float32}, img)
@@ -47,7 +45,8 @@ end
 function gram_matrix(x)
     w, h, ch, b = size(x)
     local features = reshape(x, w*h, ch, b)
-    [At_mul_B(features[:,:,i], features[:,:,i]) / (w * h * ch) for i in 1:b]
+    cat(3, [At_mul_B(features[:,:,i], features[:,:,i]) / (w * h * ch) for i in 1:b]...)
+end
 end
 
 function normalize_batch(x)
