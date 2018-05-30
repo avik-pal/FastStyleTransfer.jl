@@ -5,18 +5,15 @@
 mutable struct InstanceNorm <: layers
     β
     γ
-    ϵ
 end
 
 Flux.treelike(InstanceNorm)
 
-InstanceNorm(chs::Int; initβ = zeros, initγ = ones, ϵ = 1.0e-8) = InstanceNorm(param(initβ(chs)), param(initγ(chs)), ϵ)
+InstanceNorm(chs::Int; initβ = zeros, initγ = ones) = InstanceNorm(param(initβ(chs)), param(initγ(chs)))
 
-# NOTE: Calculating the std on cpu is much faster
 function (IN::InstanceNorm)(x)
     local chs = length(IN.β.data)
-    ẋ = reshape(x, :, size(x,4))
-    reshape(IN.γ, (1,1,chs,1)) .* ((x .- mean(ẋ, 1)) ./ std(ẋ, 1)) .+ reshape(IN.β, (1,1,chs,1))
+    reshape(IN.γ, (1,1,chs,1)) .* ((x .- mean(x, [1,2,3])) ./ std(x, [1,2,3])) .+ reshape(IN.β, (1,1,chs,1))
 end
 
 #---------------------------Residual Block-----------------------------------

@@ -3,7 +3,7 @@
 #------------------------Utilities to Train new models----------------------------
 
 function train(train_data_path, batch_size, η, style_image_path, epochs, model_save_path, content_weight, style_weight)
-    train_dataset = load_dataset(train_data_path, batch_size) |> gpu
+    train_dataset = load_dataset(train_data_path, batch_size)
     transformer = TransformerNet() |> gpu
     optimizer = Flux.ADAM(params(transformer), η)
     style = load_image(style_image_path)
@@ -39,12 +39,17 @@ function train(train_data_path, batch_size, η, style_image_path, epochs, model_
         total_loss
     end
 
-    @epochs epochs Flux.train!(loss_function, train_dataset, optimizer)
+    @epochs epochs begin
+        for d in train_dataset
+            Flux.back!(loss_function(d |> gpu))
+            optimizer()
+        end
+    end
 
     # NOTE: Model must be brought to device while saving since stylization might be performed on CPU
     transformer = transformer |> cpu
 
-    @save "model_save_path" transformer
+    @save model_save_path transformer
 end
 
 #----------------------------------Utilities to Stylize Images--------------------------------

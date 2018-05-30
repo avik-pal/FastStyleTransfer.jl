@@ -19,7 +19,8 @@ function load_image(filename; size::Int = -1, scale::Int = -1)
         img[i,:,:] = (img[i,:,:] - mean[i]) / std[i]
     end
     img = permutedims(img, [2,3,1])
-    img = reshape(img, (size(img, 2), size(img, 1), 3, 1))
+    # The following line strangely throws an error
+    # img = reshape(img, size(img)..., 1)
 end
 
 function save_image(filename, img, display::Bool = true)
@@ -47,13 +48,19 @@ function gram_matrix(x)
     local features = reshape(x, w*h, ch, b)
     cat(3, [At_mul_B(features[:,:,i], features[:,:,i]) / (w * h * ch) for i in 1:b]...)
 end
-end
 
 function normalize_batch(x)
     mean = [123.68, 116.779, 103.939]
     std = [58.624, 57.334, 57.6]
     for i in 1:3
-        x[i,:,:] = (x[i,:,:] - mean[i]) / std[i]
+        x[:,:,i,:] = (x[:,:,i,:] - mean[i]) ./ std[i]
     end
     x
 end
+
+#----------------------------Extension of certain functions------------------------------
+using Base.std
+
+# Not as per the defination
+Base.std(x::TrackedArray, dim::Array; mean = Base.mean(x, dim)) =
+    sqrt.(sum((x .- mean).^2, dim) ./ (prod(size(x)[dim])-1))

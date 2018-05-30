@@ -9,6 +9,8 @@ mutable struct vgg19 <: model
     slice4
 end
 
+Flux.treelike(vgg19)
+
 function vgg19()
     vgg = VGG19().layers
     slice1 = Chain(vgg[1:5]...)
