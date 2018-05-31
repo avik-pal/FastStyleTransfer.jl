@@ -11,8 +11,11 @@ function load_image(filename; size::Int = -1, scale::Int = -1)
         dims = size(img, 1)
         img = imresize(img, (dims, dims))
     end
-    img = float.(channelview(img)) * 255
+    img = float.(channelview(img)) * 255.0
     # Normalize the input as per the Imagenet Data
+    if(ndims(img) == 2)
+        return img
+    end
     mean = reshape([123.68, 116.779, 103.939], (3,1,1))
     std = reshape([58.624, 57.334, 57.6], (3,1,1))
     img = (img .- mean)./std
@@ -43,8 +46,10 @@ function load_dataset(path, batch, total)
     images = []
     for i in paths
         img = load_image(i, size = 224)
-        if(size(img)==(224,224,3)) # Hack to avoid errors with COCO Dataset
+        if(ndims(img) == 3) # Hack to avoid errors in case of MSCOCO
             push!(images, img)
+        else
+            total -= 1
         end
     end
     [cat(4, images[i]...) for i in partition(1:total, batch)]
@@ -57,9 +62,9 @@ function gram_matrix(x)
 end
 
 function normalize_batch(x)
-    mean = reshape([123.68, 116.779, 103.939], (1,1,3,1))
-    std = reshape([58.624, 57.334, 57.6], (1,1,3,1))
-    x = (x .- mean) ./ std
+    mean = reshape([123.68, 116.779, 103.939], (1,1,3,1)) |> gpu
+    std = reshape([58.624, 57.334, 57.6], (1,1,3,1)) |> gpu
+    (x .- mean) ./ std
 end
 
 #----------------------------Extension of certain functions------------------------------
