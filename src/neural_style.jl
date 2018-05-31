@@ -56,10 +56,11 @@ end
 
 #----------------------------------Utilities to Stylize Images--------------------------------
 
-function stylize(image_path, model_path = "../models/trained_network_1.bson"; save_path = None, display::Bool = true)
+function stylize(image_path, model_path = "../models/trained_network_1.bson"; save_path = "", display::Bool = true)
     info("Starting to Load Model")
     @load model_path transformer
     transformer = transformer |> gpu
+    Flux.testmode!(transformer)
     info("Model has been Loaded Successfully")
     img = load_image(image_path)
     img = reshape(img, size(img)..., 1) |> gpu
@@ -67,10 +68,11 @@ function stylize(image_path, model_path = "../models/trained_network_1.bson"; sa
     a = time()
     stylized_img = transformer(img)
     info("Image has been Stylized in $(time()-a) seconds")
-    if(save_path == None)
+    if(save_path == "")
         path = rsplit(image_path, ".", limit = 2)
         save_path = "$(path[1])_stylized.$(path[2])"
     end
-    save_image(save_path, stylized_img.data |> cpu, display)
+    stylized_img = stylized_img |> cpu
+    save_image(save_path, stylized_img.data, display)
     info("The image has been saved successfully")
 end

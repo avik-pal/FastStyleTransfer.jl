@@ -29,7 +29,7 @@ function save_image(filename, img, display::Bool = true)
     std = reshape([58.624, 57.334, 57.6], (3,1,1))
     img = img .* std .+ mean
     img = clamp.(img, 0, 255) / 255
-    img = colorview(RGB{Float32}, img)
+    img = colorview(RGB{eltype(img)}, img)
     save(filename, img)
     if(display)
         img
@@ -42,7 +42,10 @@ function load_dataset(path, batch, total)
     paths = [joinpath(path, i) for i in z[indices]]
     images = []
     for i in paths
-        push!(images, load_image(i, size = 224))
+        img = load_image(i, size = 224)
+        if(size(img)==(224,224,3)) # Hack to avoid errors with COCO Dataset
+            push!(images, img)
+        end
     end
     [cat(4, images[i]...) for i in partition(1:total, batch)]
 end
@@ -50,7 +53,7 @@ end
 function gram_matrix(x)
     w, h, ch, b = size(x)
     local features = reshape(x, w*h, ch, b)
-    cat(3, [At_mul_B(features[:,:,i], features[:,:,i]) / (w * h * ch) for i in 1:b]...)
+    cat(3, [features[:,:,i]' * features[:,:,i] / (w * h * ch) for i in 1:b]...)
 end
 
 function normalize_batch(x)

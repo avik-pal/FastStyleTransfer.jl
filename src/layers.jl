@@ -2,6 +2,9 @@
 
 #-------------------Instance Normalization-----------------------------------
 
+# NOTE: The Instance Normalization code is slow and can act as a huge bottleneck.
+# Hence until this issue is fixed we shall be using BatchNorm
+
 mutable struct InstanceNorm <: layers
     β
     γ
@@ -38,28 +41,26 @@ end
 
 # Paper suggests using Reflection Padding. However normal padding is being used until this layer is implemented
 
-# mutable struct ReflectionPad <: layers
-#     dim::Int
-# end
+mutable struct ReflectionPad <: layers
+    dim::Int
+end
 
-# Flux.treelike(ReflectionPad)
+Flux.treelike(ReflectionPad)
 
 #----------------------Convolution Block--------------------------------------
 
 mutable struct ConvBlock <: block
-    # pad
+    pad
     conv
 end
 
 Flux.treelike(ConvBlock)
 
 function ConvBlock(chs::Pair{<:Int,<:Int}, kernel::Tuple{Int,Int}, stride::Tuple{Int,Int} = (1,1), pad::Tuple{Int,Int} = (0,0))
-    # ConvBlock(ReflectionPad(kernel[1]÷2), Conv(kernel, chs, stride = stride, pad = pad))
-    ConvBlock(Conv(kernel, chs, stride = stride, pad = (kernel[1]÷2, kernel[2]÷2)))
+    ConvBlock(ReflectionPad(kernel[1]÷2), Conv(kernel, chs, stride = stride, pad = pad))
 end
 
-# (c::ConvBlock)(x) = c.conv(c.pad(x))
-(c::ConvBlock)(x) = c.conv(x)
+(c::ConvBlock)(x) = c.conv(c.pad(x))
 
 #-------------------------Upsample--------------------------------------------
 
