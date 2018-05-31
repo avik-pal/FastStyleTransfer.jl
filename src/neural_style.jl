@@ -2,12 +2,12 @@
 
 #------------------------Utilities to Train new models----------------------------
 
-function train(train_data_path, batch_size, η, style_image_path, epochs, model_save_path, content_weight, style_weight)
-    train_dataset = load_dataset(train_data_path, batch_size)
+function train(train_data_path, batch_size, η, style_image_path, epochs, model_save_path, content_weight, style_weight, images = 10000)
+    train_dataset = load_dataset(train_data_path, batch_size, images)
     transformer = TransformerNet() |> gpu
     optimizer = Flux.ADAM(params(transformer), η)
     style = load_image(style_image_path)
-    style = repeat(style, outer = (1,1,1,batch_size)) |> gpu
+    style = repeat(reshape(style, size(style)..., 1), outer = (1,1,1,batch_size)) |> gpu
 
     vgg = vgg19() |> gpu
     features_style = vgg(style)
@@ -17,21 +17,22 @@ function train(train_data_path, batch_size, η, style_image_path, epochs, model_
         y = transformer(x)
 
         y = normalize_batch(y)
-        x = normalize_batch(x)
+        # NOTE: The input to loss function is already normalized
+        # x = normalize_batch(x)
 
         features_y = vgg(y)
         features_x = vgg(x)
 
         # TODO: Train models for other depths by changing the index number
-        content_loss = content_weight * mean(abs2(features_y[2] - features_x[2]))
+        content_loss = content_weight * Flux.mse(features_y[2] - features_x[2])
 
         style_loss = 0.0
         for i in 1:size(features_style, 1)
             gram_sty = gram_style[i]
             gram_y = gram_matrix(features_y[i])
-            style_loss += mean(abs(gram_y - gram_sty[:batch_size,:,:]))
+            style_loss = style_loss + Flux.mse(gram_y, gram_sty)
         end
-        style_loss *= style_weight
+        style_loss = style_loss * style_weight
 
         total_loss = content_loss + style_loss
         println("The content loss is $(content_loss) and style loss is $(style_loss) and the total loss is $(total_loss)")

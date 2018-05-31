@@ -4,6 +4,7 @@ using Flux, Metalhead
 using FileIO, Images
 using BSON: @save, @load
 using CuArrays
+using Base.Iterators: partition
 
 export train, stylize, stylize_all
 
