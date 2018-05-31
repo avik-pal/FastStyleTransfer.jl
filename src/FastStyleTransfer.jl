@@ -3,6 +3,7 @@ module FastStyleTransfer
 using Flux, Metalhead
 using FileIO, Images
 using BSON: @save, @load
+using Flux: @epochs
 using CuArrays
 using Base.Iterators: partition
 

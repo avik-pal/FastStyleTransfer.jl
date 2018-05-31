@@ -18,7 +18,7 @@ function load_image(filename; size::Int = -1, scale::Int = -1)
     img = (img .- mean)./std
     img = permutedims(img, [3,2,1])
     # The following line strangely throws an error
-    img = reshape(img, size(img)..., 1)
+    # img = reshape(img, size(img)..., 1)
 end
 
 function save_image(filename, img, display::Bool = true)
@@ -37,10 +37,12 @@ function save_image(filename, img, display::Bool = true)
 end
 
 function load_dataset(path, batch, total)
-    paths = [joinpath(path, i) for i in randperm(readdir(path))[1:total]]
+    z = readdir(path)
+    indices = randperm(length(z))[1:total]
+    paths = [joinpath(path, i) for i in z[indices]]
     images = []
     for i in paths
-        push!(paths, load_image(i))
+        push!(images, load_image(i, size = 224))
     end
     [cat(4, images[i]...) for i in partition(1:total, batch)]
 end

@@ -6,12 +6,12 @@ function train(train_data_path, batch_size, η, style_image_path, epochs, model_
     train_dataset = load_dataset(train_data_path, batch_size, images)
     transformer = TransformerNet() |> gpu
     optimizer = Flux.ADAM(params(transformer), η)
-    style = load_image(style_image_path)
+    style = load_image(style_image_path, size = 224)
     style = repeat(reshape(style, size(style)..., 1), outer = (1,1,1,batch_size)) |> gpu
 
     vgg = vgg19() |> gpu
     features_style = vgg(style)
-    gram_style = [gram_matrix(y) for y in features_style]
+    gram_style = [gram_matrix(y) for y in features_style];
 
     function loss_function(x)
         y = transformer(x)
@@ -24,7 +24,7 @@ function train(train_data_path, batch_size, η, style_image_path, epochs, model_
         features_x = vgg(x)
 
         # TODO: Train models for other depths by changing the index number
-        content_loss = content_weight * Flux.mse(features_y[2] - features_x[2])
+        content_loss = content_weight * Flux.mse(features_y[2], features_x[2])
 
         style_loss = 0.0
         for i in 1:size(features_style, 1)
@@ -42,7 +42,8 @@ function train(train_data_path, batch_size, η, style_image_path, epochs, model_
 
     @epochs epochs begin
         for d in train_dataset
-            Flux.back!(loss_function(d |> gpu))
+            l = loss_function(d |> gpu);
+            Flux.back!(l);
             optimizer()
         end
     end
