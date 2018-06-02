@@ -6,6 +6,8 @@ using BSON: @save, @load
 using Flux: @epochs
 using CuArrays
 using Base.Iterators: partition
+using Flux.Tracker: track
+using Flux.Tracker.back
 
 export train, stylize, stylize_all
 

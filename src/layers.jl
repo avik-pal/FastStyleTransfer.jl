@@ -64,13 +64,31 @@ end
 
 #-------------------------Upsample--------------------------------------------
 
-# NOTE: There is an unmerged PR in Flux.jl implementing repeat for tracked arrays. Remove this code block once it is merged
+# NOTE: The following code is implemented by @staticfloat and is currently an unmerged PR in Flux.jl.
+
+_repeat(A, inner, outer) = Base.repeat(A; inner=inner, outer=outer)
+Base.repeat(A::TrackedArray; inner=ntuple(x->1, ndims(A)), outer=ntuple(x->1, ndims(A))) = track(_repeat, A, inner, outer)
+
+function back(::typeof(_repeat), Δ, xs::TrackedArray, inner, outer)
+    Δ′ = similar(xs.data)
+    Δ′ .= 0
+    S = size(xs.data)
+
+    # Loop through each element of Δ, calculate source dimensions, accumulate into Δ′
+    for (dest_idx, val) in enumerate(IndexCartesian(), Δ)
+        # First, round dest_idx[dim] to nearest gridpoint defined by inner[dim], then
+        # wrap around based on original size S.
+        src_idx = [mod1(div(dest_idx[dim] - 1, inner[dim]) + 1, S[dim]) for dim in 1:length(S)]
+        Δ′[src_idx...] += val
+    end
+    back(xs, Δ′)
+end
 
 Upsample(x) = repeat(x, inner = (2,2,1,1))
 
-Upsample(x::TrackedArray) = Tracker.track(Upsample, x)
+# Upsample(x::TrackedArray) = Tracker.track(Upsample, x)
 
-Tracker.back(::typeof(Upsample), Δ, x) = Tracker.@back(x, maxpool(Δ, (2,2), stride = (2,2)))
+# Tracker.back(::typeof(Upsample), Δ, x) = Tracker.@back(x, maxpool(Δ, (2,2), stride = (2,2)))
 
 #----------------------Upsampling BLock---------------------------------------
 
