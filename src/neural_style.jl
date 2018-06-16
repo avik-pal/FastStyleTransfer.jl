@@ -17,8 +17,7 @@ function train(train_data_path, batch_size, η, style_image_path, epochs, model_
         y = transformer(x)
 
         y = normalize_batch(y)
-        # NOTE: The input to loss function is already normalized
-        # x = normalize_batch(x)
+        x = normalize_batch(x)
 
         features_y = vgg(y)
         features_x = vgg(x)

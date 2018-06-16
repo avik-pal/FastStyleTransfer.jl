@@ -2,6 +2,11 @@
 
 #-----------------------Utilities to load and save image---------------------------
 
+im_mean = reshape([0.485, 0.458, 0.408], (1,1,3)) |> gpu
+im_std = reshape([0.261, 0.255, 0.256], (1,1,3)) |> gpu
+im_mean2 = reshape([0.485, 0.458, 0.408], (1,1,3,1)) |> gpu
+im_std2 = reshape([0.261, 0.255, 0.256], (1,1,3,1)) |> gpu
+
 # NOTE: The image returned is scaled to equal dimensions on both side
 function load_image(filename; size::Int = -1, scale::Int = -1)
     img = load(filename)
@@ -11,32 +16,24 @@ function load_image(filename; size::Int = -1, scale::Int = -1)
         dims = size(img, 1)
         img = imresize(img, (dims, dims))
     end
-    img = float.(channelview(img)) * 255.0
+    img = Float32.(channelview(img))
     # Normalize the input as per the Imagenet Data
     if(ndims(img) == 2)
         return img
     end
-    mean = reshape([123.68, 116.779, 103.939], (3,1,1))
-    std = reshape([58.624, 57.334, 57.6], (3,1,1))
-    img = (img .- mean)./std
-    img = permutedims(img, [3,2,1])
+    permutedims((img .- im_mean)./im_std, [3,2,1])
     # The following line strangely throws an error
     # img = reshape(img, size(img)..., 1)
 end
 
-function save_image(filename, img, display::Bool = true)
+function save_image(filename, img)
     img = reshape(img, (size(img, 2), size(img, 1), 3))
     img = permutedims(img, [3,2,1])
     # Denormalize the data
-    mean = reshape([123.68, 116.779, 103.939], (3,1,1))
-    std = reshape([58.624, 57.334, 57.6], (3,1,1))
-    img = img .* std .+ mean
-    img = clamp.(img, 0, 255) / 255
+    img = img .* im_std .+ im_mean
+    img = clamp.(img, 0, 1)
     img = colorview(RGB{eltype(img)}, img)
     save(filename, img)
-    if(display)
-        img
-    end
 end
 
 function load_dataset(path, batch, total)
@@ -61,11 +58,7 @@ function gram_matrix(x)
     cat(3, [features[:,:,i]' * features[:,:,i] / (w * h * ch) for i in 1:b]...)
 end
 
-function normalize_batch(x)
-    mean = reshape([123.68, 116.779, 103.939], (1,1,3,1)) |> gpu
-    std = reshape([58.624, 57.334, 57.6], (1,1,3,1)) |> gpu
-    (x .- mean) ./ std
-end
+normalize_batch(x) =  (x .- im_mean2) ./ im_std2
 
 #----------------------------Extension of certain functions------------------------------
 using Base.std

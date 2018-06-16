@@ -86,10 +86,6 @@ end
 
 Upsample(x) = repeat(x, inner = (2,2,1,1))
 
-# Upsample(x::TrackedArray) = Tracker.track(Upsample, x)
-
-# Tracker.back(::typeof(Upsample), Δ, x) = Tracker.@back(x, maxpool(Δ, (2,2), stride = (2,2)))
-
 #----------------------Upsampling BLock---------------------------------------
 
 # TODO: Use reflection padding instead of zero padding once its implemented
