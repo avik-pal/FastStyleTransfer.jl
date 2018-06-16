@@ -2,8 +2,8 @@
 
 #-----------------------Utilities to load and save image---------------------------
 
-im_mean = reshape([0.485, 0.458, 0.408], (1,1,3)) |> gpu
-im_std = reshape([0.261, 0.255, 0.256], (1,1,3)) |> gpu
+im_mean = reshape([0.485, 0.458, 0.408], (1,1,3))
+im_std = reshape([0.261, 0.255, 0.256], (1,1,3))
 im_mean2 = reshape([0.485, 0.458, 0.408], (1,1,3,1)) |> gpu
 im_std2 = reshape([0.261, 0.255, 0.256], (1,1,3,1)) |> gpu
 
@@ -21,7 +21,7 @@ function load_image(filename; size::Int = -1, scale::Int = -1)
     if(ndims(img) == 2)
         return img
     end
-    permutedims((img .- im_mean)./im_std, [3,2,1])
+    (permutedims(img, [3,2,1]) .- im_mean)./im_std
     # The following line strangely throws an error
     # img = reshape(img, size(img)..., 1)
 end
