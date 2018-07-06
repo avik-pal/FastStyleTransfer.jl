@@ -17,8 +17,6 @@ function load_image(filename; size::Int = -1, scale::Int = -1)
     img = Float32.(channelview(img)) * 255
     ndims(img) == 2 && return img
     permutedims(img, [3,2,1]) .- im_mean
-    # The following line strangely throws an error
-    img = reshape(img, size(img, 1), size(img, 2), size(img, 3) 1)
 end
 
 function save_image(filename, img, display_img::Bool = false)
@@ -39,7 +37,7 @@ function load_dataset(path, batch, total)
     for (counts, i) in enumerate(paths)
         img = load_image(i, size = 224)
         ndims(img) == 3 ? push!(images, img) : total -= 1 # Hack to avoid errors in case of MSCOCO
-        counts % 100 && info("$counts images have been loaded")
+        counts % 100 == 0 && info("$counts images have been loaded")
     end
     [cat(4, images[i]...) for i in partition(1:total, batch)]
 end

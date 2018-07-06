@@ -18,4 +18,4 @@ TransformerNet() = Chain(ConvPad(3=>32, (3,3)),
                          BatchNorm(64),
                          UpsamplingBlock(64=>32, (3,3), (1,1), 2),
                          BatchNorm(32),
-                         ConvPad(32=>3, (9,9), (1,1))
+                         ConvPad(32=>3, (9,9), (1,1)))

@@ -1,10 +1,10 @@
 module FastStyleTransfer
 
-using Flux, Metalhead, Images, CuArrays
+using Flux, Metalhead, Images, CuArrays, NNlib
 using BSON: @save, @load
-using Flux: @epochs
+using Flux: @epochs, sub2, expand
 using Base.Iterators: partition
-using Flux.Tracker: track, back, data
+using Flux.Tracker: track, back, data, @back
 
 export train, stylize, stylize_all
 
