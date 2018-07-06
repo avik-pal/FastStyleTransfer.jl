@@ -39,25 +39,25 @@ function load_dataset(path, batch, total)
     for (counts, i) in enumerate(paths)
         img = load_image(i, size = 224)
         ndims(img) == 3 ? push!(images, img) : total -= 1 # Hack to avoid errors in case of MSCOCO
-        if counts % 100
-            info("$counts images have been loaded")
+        counts % 100 && info("$counts images have been loaded")
     end
     [cat(4, images[i]...) for i in partition(1:total, batch)]
 end
 
-function gram_matrix(x::CuArray)
-    w, h, ch, b = size(x)
-    local features = reshape(x, w*h, ch, b)
-    features = [features[:,:,i] for i in 1:b]
-    res = CuArrays.gemm_batched('T', 'N', features, features)
-    cat(3, res...) / (w * h * ch)
-end
+# NOTE: The wrapper is quite slow
+# function gram_matrix(x::CuArray)
+#     w, h, ch, b = size(x)
+#     local features = reshape(x, w*h, ch, b)
+#     features = [features[:,:,i] for i in 1:b]
+#     res = CuArrays.BLAS.gemm_batched('T', 'N', features, features)
+#     cat(3, res...) / (w * h * ch)
+# end
 
 function gram_matrix(x)
     w, h, ch, b = size(x)
     local features = reshape(x, w*h, ch, b)
     features = [features[:,:,i] for i in 1:b]
-    cat(3, [features[:,:,i]' * features[:,:,i] for i in 1:b]...) / (w * h * ch)
+    cat(3, [features[i]' * features[i] for i in 1:b]...) / (w * h * ch)
 end
 
 #----------------------------Extension of certain functions------------------------------
