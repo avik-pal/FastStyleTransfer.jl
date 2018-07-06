@@ -2,37 +2,32 @@
 
 #-----------------------Utilities to load and save image---------------------------
 
-im_mean = reshape([0.485, 0.458, 0.408], (1,1,3))
-im_std = reshape([0.261, 0.255, 0.256], (1,1,3))
-im_mean2 = reshape([0.485, 0.458, 0.408], (1,1,3,1)) |> gpu
-im_std2 = reshape([0.261, 0.255, 0.256], (1,1,3,1)) |> gpu
+im_mean = reshape([0.485, 0.458, 0.408], (1,1,3)) * 255
+im_mean2 = reshape([0.485, 0.458, 0.408], (1,1,3,1)) * 255 |> gpu
 
 # NOTE: The image returned is scaled to equal dimensions on both side
 function load_image(filename; size::Int = -1, scale::Int = -1)
     img = load(filename)
-    if(size != -1)
+    if size != -1
         img = imresize(img, (size,size))
-    elseif(scale != -1)
+    elseif scale != -1
         dims = size(img, 1)
         img = imresize(img, (dims, dims))
     end
-    img = Float32.(channelview(img))
-    # Normalize the input as per the Imagenet Data
-    if(ndims(img) == 2)
-        return img
-    end
-    (permutedims(img, [3,2,1]) .- im_mean)./im_std
+    img = Float32.(channelview(img)) * 255
+    ndims(img) == 2 && return img
+    permutedims(img, [3,2,1]) .- im_mean
     # The following line strangely throws an error
-    # img = reshape(img, size(img)..., 1)
+    img = reshape(img, size(img, 1), size(img, 2), size(img, 3) 1)
 end
 
-function save_image(filename, img)
+function save_image(filename, img, display_img::Bool = false)
     img = reshape(img, (size(img, 2), size(img, 1), 3))
     img = permutedims(img, [3,2,1])
-    # Denormalize the data
-    img = img .* im_std .+ im_mean
+    img = (img .+ im_mean) / 255
     img = clamp.(img, 0, 1)
     img = colorview(RGB{eltype(img)}, img)
+    display_img && display(img)
     save(filename, img)
 end
 
@@ -41,24 +36,29 @@ function load_dataset(path, batch, total)
     indices = randperm(length(z))[1:total]
     paths = [joinpath(path, i) for i in z[indices]]
     images = []
-    for i in paths
+    for (counts, i) in enumerate(paths)
         img = load_image(i, size = 224)
-        if(ndims(img) == 3) # Hack to avoid errors in case of MSCOCO
-            push!(images, img)
-        else
-            total -= 1
-        end
+        ndims(img) == 3 ? push!(images, img) : total -= 1 # Hack to avoid errors in case of MSCOCO
+        if counts % 100
+            info("$counts images have been loaded")
     end
     [cat(4, images[i]...) for i in partition(1:total, batch)]
+end
+
+function gram_matrix(x::CuArray)
+    w, h, ch, b = size(x)
+    local features = reshape(x, w*h, ch, b)
+    features = [features[:,:,i] for i in 1:b]
+    res = CuArrays.gemm_batched('T', 'N', features, features)
+    cat(3, res...) / (w * h * ch)
 end
 
 function gram_matrix(x)
     w, h, ch, b = size(x)
     local features = reshape(x, w*h, ch, b)
-    cat(3, [features[:,:,i]' * features[:,:,i] / (w * h * ch) for i in 1:b]...)
+    features = [features[:,:,i] for i in 1:b]
+    cat(3, [features[:,:,i]' * features[:,:,i] for i in 1:b]...) / (w * h * ch)
 end
-
-normalize_batch(x) =  (x .- im_mean2) ./ im_std2
 
 #----------------------------Extension of certain functions------------------------------
 using Base.std

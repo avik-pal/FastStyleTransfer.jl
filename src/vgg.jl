@@ -2,7 +2,7 @@
 
 #-----------------------------VGG19-----------------------------------
 
-mutable struct vgg19 <: model
+mutable struct vgg19
     slice1
     slice2
     slice3

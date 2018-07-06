@@ -1,19 +1,12 @@
 module FastStyleTransfer
 
-using Flux, Metalhead
-using FileIO, Images
+using Flux, Metalhead, Images, CuArrays
 using BSON: @save, @load
 using Flux: @epochs
-using CuArrays
 using Base.Iterators: partition
-using Flux.Tracker: track
-using Flux.Tracker.back
+using Flux.Tracker: track, back, data
 
 export train, stylize, stylize_all
-
-abstract type model end
-abstract type layers end
-abstract type block <: layers end
 
 include("utils.jl")
 include("layers.jl")

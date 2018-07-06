@@ -16,8 +16,8 @@ function train(train_data_path, batch_size, η, style_image_path, epochs, model_
     function loss_function(x)
         y = transformer(x)
 
-        y = normalize_batch(y)
-        x = normalize_batch(x)
+        y = normalize_batch(y) .- im_mean2
+        x = normalize_batch(x) .- im_mean2
 
         features_y = vgg(y)
         features_x = vgg(x)
@@ -55,7 +55,7 @@ end
 
 #----------------------------------Utilities to Stylize Images--------------------------------
 
-function stylize(image_path, model_path = "../models/trained_network_1.bson"; save_path = "", display::Bool = true)
+function stylize(image_path, model_path = "../models/trained_network_1.bson"; save_path = "", display_img::Bool = true)
     info("Starting to Load Model")
     @load model_path transformer
     transformer = transformer |> gpu
@@ -72,6 +72,6 @@ function stylize(image_path, model_path = "../models/trained_network_1.bson"; sa
         save_path = "$(path[1])_stylized.$(path[2])"
     end
     stylized_img = stylized_img |> cpu
-    save_image(save_path, stylized_img.data, display)
+    save_image(save_path, data(stylized_img), display_img)
     info("The image has been saved successfully")
 end
