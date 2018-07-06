@@ -2,9 +2,9 @@
 
 #------------------------Utilities to Train new models----------------------------
 
-function train(train_data_path, batch_size, η, style_image_path, epochs, model_save_path, content_weight, style_weight, images = 10000)
+function train(train_data_path, batch_size, η, style_image_path, epochs, model_save_path, content_weight, style_weight, model = TransformerNet; images = 10000)
     train_dataset = load_dataset(train_data_path, batch_size, images)
-    transformer = TransformerNet() |> gpu
+    transformer = model() |> gpu
     optimizer = Flux.ADAM(params(transformer), η)
     style = load_image(style_image_path, size = 224)
     style = repeat(reshape(style, size(style)..., 1), outer = (1,1,1,batch_size)) |> gpu
@@ -34,13 +34,14 @@ function train(train_data_path, batch_size, η, style_image_path, epochs, model_
         style_loss = style_loss * style_weight
 
         total_loss = content_loss + style_loss
-        println("The content loss is $(content_loss) and style loss is $(style_loss) and the total loss is $(total_loss)")
+        println("Content Loss : $(content_loss) || Style Loss : $(style_loss) || Total Loss : $(total_loss)")
 
         total_loss
     end
 
     @epochs epochs begin
         for d in train_dataset
+            size(d, 4) != batch_size && continue
             l = loss_function(d |> gpu);
             Flux.back!(l);
             optimizer()

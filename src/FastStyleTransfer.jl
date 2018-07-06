@@ -2,7 +2,7 @@ module FastStyleTransfer
 
 using Flux, Metalhead, Images, CuArrays, NNlib
 using BSON: @save, @load
-using Flux: @epochs, sub2, expand
+using Flux: @epochs, sub2, expand, initn
 using Base.Iterators: partition
 using Flux.Tracker: track, back, data, @back
 
