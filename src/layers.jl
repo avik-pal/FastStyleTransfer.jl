@@ -64,28 +64,28 @@ UpsamplingBlock(chs::Pair{<:Int,<:Int}, kernel::Tuple{Int,Int}, stride::Tuple{In
 
 #---------------------Convolution Transpose-----------------------------------
 
-function out_size(stride, pad, dilation, kernel, xdims)
+function out_size(stride, pad, dilation, kernel, xdims, output_pad)
     dims = []
-    for i in zip(stride, pad, dilation, kernel, xdims)
-        push!(dims, i[1] * (i[5] - 1) + (i[4] - 1) * i[3] - 2 * i[2] + 1)
+    for i in zip(stride, pad, dilation, kernel, xdims, output_pad)
+        push!(dims, i[1] * (i[5] - 1) + (i[4] - 1) * i[3] - 2 * i[2] + 1 + i[6])
     end
     dims
 end
 
-function _convtranspose(x, w, stride, pad, dilation, output_size)
-    stride, pad, dilation = NNlib.padtuple(x, stride), NNlib.padtuple(x, pad), NNlib.padtuple(x, dilation)
-    y = output_size === nothing ? similar(x, out_size(stride, pad, dilation, size(w)[1:end-2], size(x)[1:end-2])...,size(w)[end-1],size(x)[end]) : similar(x, output_size...,size(w)[end-1],size(x)[end])
+function _convtranspose(x, w, stride, pad, dilation, output_pad)
+    stride, pad, dilation, output_pad = NNlib.padtuple(x, stride), NNlib.padtuple(x, pad), NNlib.padtuple(x, dilation), NNlib.padtuple(x, output_pad)
+    y = similar(x, out_size(stride, pad, dilation, size(w)[1:end-2], size(x)[1:end-2], output_pad)...,size(w)[end-1],size(x)[end])
     NNlib.∇conv_data(x, y, w, stride = stride, pad = pad, dilation = dilation)
 end
 
-convtranspose(x::TrackedArray{<:Real,N}, w::TrackedArray{<:Real,N}; stride = 1, pad = 0, dilation = 1, output_size = nothing) where N =
-    track(_convtranspose, x, w, stride, pad, dilation, output_size)
-convtranspose(x::AbstractArray{<:Real,N}, w::TrackedArray{<:Real,N}; stride = 1, pad = 0, dilation = 1, output_size = nothing) where N =
-    track(_convtranspose, x, w, stride, pad, dilation, output_size)
-convtranspose(x::TrackedArray{<:Real,N}, w::AbstractArray{<:Real,N}; stride = 1, pad = 0, dilation = 1, output_size = nothing) where N =
-    track(_convtranspose, x, w, stride, pad, dilation, output_size)
+convtranspose(x::TrackedArray{<:Real,N}, w::TrackedArray{<:Real,N}; stride = 1, pad = 0, dilation = 1, output_pad = 0) where N =
+    track(_convtranspose, x, w, stride, pad, dilation, output_pad)
+convtranspose(x::AbstractArray{<:Real,N}, w::TrackedArray{<:Real,N}; stride = 1, pad = 0, dilation = 1, output_pad = 0) where N =
+    track(_convtranspose, x, w, stride, pad, dilation, output_pad)
+convtranspose(x::TrackedArray{<:Real,N}, w::AbstractArray{<:Real,N}; stride = 1, pad = 0, dilation = 1, output_pad = 0) where N =
+    track(_convtranspose, x, w, stride, pad, dilation, output_pad)
 
-function Tracker.back(::typeof(_convtranspose), Δ, x, w, stride, pad, dilation, output_size)
+function Tracker.back(::typeof(_convtranspose), Δ, x, w, stride, pad, dilation, output_pad)
     @back(x, NNlib.conv(Δ, data(w); stride = stride, pad = pad, dilation = dilation))
     @back(w, NNlib.∇conv_filter(data(x), Δ, data(w); stride = stride, pad = pad, dilation = dilation))
 end
@@ -97,28 +97,28 @@ struct ConvTranspose{N,F,A,V}
     stride::NTuple{N,Int}
     pad::NTuple{N,Int}
     dilation::NTuple{N,Int}
-    output_size
+    output_pad::NTuple{N,Int}
 end
 
 ConvTranspose(w::AbstractArray{T,N}, b::AbstractVector{T}, σ = identity;
-    stride = 1, pad = 0, dilation = 1, output_size = nothing) where {T,N} =
-    ConvTranspose(σ, w, b, expand.(sub2(Val{N}), (stride, pad, dilation))..., output_size)
+    stride = 1, pad = 0, dilation = 1, output_pad = 0) where {T,N} =
+    ConvTranspose(σ, w, b, expand.(sub2(Val{N}), (stride, pad, dilation, output_pad))...)
 
 ConvTranspose(k::NTuple{N,Integer}, ch::Pair{<:Integer,<:Integer}, σ = identity; init = Flux.initn,
-    stride = 1, pad = 0, dilation = 1, output_size = nothing) where N =
+    stride = 1, pad = 0, dilation = 1, output_pad = 0) where N =
     ConvTranspose(param(init(k..., ch[2], ch[1])), param(zeros(ch[2])), σ,
-                  stride = stride, pad = pad, dilation = dilation, output_size = output_size)
+                  stride = stride, pad = pad, dilation = dilation, output_pad = output_pad)
 
 Flux.treelike(ConvTranspose)
 
 function (c::ConvTranspose)(x)
     σ, b = c.σ, reshape(c.bias, map(_->1, c.stride)..., :, 1)
-    σ.(convtranspose(x, c.weight, stride = c.stride, pad = c.pad, dilation = c.dilation, output_size = c.output_size) .+ b)
+    σ.(convtranspose(x, c.weight, stride = c.stride, pad = c.pad, dilation = c.dilation, output_pad = c.output_pad) .+ b)
 end
 
 function Base.show(io::IO, l::ConvTranspose)
     print(io, "ConvTranspose(", size(l.weight)[1:ndims(l.weight)-2])
     print(io, ", ", size(l.weight, ndims(l.weight)-1), "=>", size(l.weight, ndims(l.weight)))
     l.σ == identity || print(io, ", ", l.σ)
-    l.output_size === nothing ? print(io, ")") : print(io, ", ", l.output_size,")")
+    print(io, ")")
 end
