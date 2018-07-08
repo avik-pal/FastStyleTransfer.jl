@@ -46,8 +46,8 @@ Some speed statistics: The model runs quite fast taking only `5ms` to stylize a 
 3. Implement the GPU Kernel for Upsampling Layer
 
 ### References
-[1] [Perceptual Losses for Real-Time Style Transfer and Super-Resolution](https://cs.stanford.edu/people/jcjohns/eccv16/)
-[2] [A Neural Algorithm of Artistic Style](https://arxiv.org/abs/1508.06576)
-[3] [Instance Normalization: The Missing Ingredient for Fast Stylization](https://arxiv.org/abs/1607.08022)
+1. [Perceptual Losses for Real-Time Style Transfer and Super-Resolution](https://cs.stanford.edu/people/jcjohns/eccv16/)
+2. [A Neural Algorithm of Artistic Style](https://arxiv.org/abs/1508.06576)
+3. [Instance Normalization: The Missing Ingredient for Fast Stylization](https://arxiv.org/abs/1607.08022)
 
 If you are interested in the implementation look up [this blog post](https://avik-pal.github.io/blog/2018-07-07-Implementing_Fast_Neural_Style_Transfer_in_Flux/).
