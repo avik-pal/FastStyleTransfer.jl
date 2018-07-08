@@ -43,7 +43,7 @@ Some speed statistics: The model runs quite fast taking only `5ms` to stylize a 
 
 1. Implement a GPU Kernel for Instance Normalization
 2. Substitute Zero Padding for Reflection Padding
-3.
+3. Implement the GPU Kernel for Upsampling Layer
 
 ### References
 [1] [Perceptual Losses for Real-Time Style Transfer and Super-Resolution](https://cs.stanford.edu/people/jcjohns/eccv16/)
