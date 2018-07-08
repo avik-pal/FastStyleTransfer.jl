@@ -6,11 +6,11 @@ im_mean = reshape([0.485, 0.458, 0.408], (1,1,3)) * 255
 im_mean2 = reshape([0.485, 0.458, 0.408], (1,1,3,1)) * 255 |> gpu
 
 # NOTE: The image returned is scaled to equal dimensions on both side
-function load_image(filename; size::Int = -1, scale::Int = -1)
+function load_image(filename; size_img::Int = -1, scale::Int = -1)
     img = load(filename)
     global original_size = size(img)
     if size != -1
-        img = imresize(img, (size,size))
+        img = imresize(img, (size_img,size_img))
     elseif scale != -1
         dims = size(img, 1)
         img = imresize(img, (dims, dims))
@@ -38,7 +38,7 @@ function load_dataset(path, batch, total)
     paths = [joinpath(path, i) for i in z[indices]]
     images = []
     for (counts, i) in enumerate(paths)
-        img = load_image(i, size = 224)
+        img = load_image(i, size_img = 224)
         ndims(img) == 3 ? push!(images, img) : total -= 1 # Hack to avoid errors in case of MSCOCO
         counts % 100 == 0 && info("$counts images have been loaded")
     end

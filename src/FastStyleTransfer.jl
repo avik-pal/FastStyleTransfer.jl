@@ -4,9 +4,10 @@ using Flux, Metalhead, Images, CuArrays, NNlib
 using BSON: @save, @load
 using Flux: @epochs, sub2, expand, initn
 using Base.Iterators: partition
-using Flux.Tracker: track, back, data, @back
+using Flux.Tracker: track, data, @back
+import Flux.Tracker.back
 
-export train, stylize, stylize_all
+export train, stylize
 
 include("utils.jl")
 include("layers.jl")

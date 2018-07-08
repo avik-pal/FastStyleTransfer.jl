@@ -11,13 +11,13 @@ function train(train_data_path, batch_size, η, style_image_path, epochs, model_
 
     vgg = vgg19() |> gpu
     features_style = vgg(style)
-    gram_style = [gram_matrix(y) for y in features_style];
+    gram_style = [gram_matrix(y) for y in features_style]
 
     function loss_function(x)
         y = transformer(x)
 
-        y = normalize_batch(y) .- im_mean2
-        x = normalize_batch(x) .- im_mean2
+        y = y .- im_mean2
+        x = x .- im_mean2
 
         features_y = vgg(y)
         features_x = vgg(x)
