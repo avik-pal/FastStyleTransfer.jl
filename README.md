@@ -34,10 +34,10 @@ Some speed statistics: The model runs quite fast taking only `5ms` to stylize a 
 
 ### Results
 
-||![Starry Night](./images/starry.jpg)|![Abstract Art](./images/abstract.jpg)|
-|:---:|:---:|:---:|
-|![Dancing Original](./images/dancing.jpg)|![Starry Dancing](./images/starry_dancing.jpg)|![Abstract Dancing](./images/abstract_dancing.jpg)|
-|![Original Monalisa](./images/monalisa.jpg)|![Starry Monalisa](./images/starry_monalisa.jpg)|![Abstract Monalisa](./images/abstract_monalisa.jpg)|
+||![Starry Night](./images/starry.jpg)|![Abstract Art](./images/abstract.jpg)|![Pop Style](./images/popsty.jpg)|
+|:---:|:---:|:---:|:---:|
+|![Dancing Original](./images/dancing.jpg)|![Starry Dancing](./images/starry_dancing.jpg)|![Abstract Dancing](./images/abstract_dancing.jpg)|![Pop Dancing](./images/popsty_dancing.jpg)|
+|![Original Monalisa](./images/monalisa.jpg)|![Starry Monalisa](./images/starry_monalisa.jpg)|![Abstract Monalisa](./images/abstract_monalisa.jpg)|![Pop Monalisa](./images/popsty_monalisa.jpg)|
 
 ### Future Work
 
