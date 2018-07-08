@@ -1,3 +1,5 @@
+__precompile__()
+
 module FastStyleTransfer
 
 using Flux, Metalhead, Images, CuArrays, NNlib
