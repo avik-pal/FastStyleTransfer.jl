@@ -82,9 +82,8 @@ convtranspose(x::TrackedArray, w::TrackedArray; kw...) = track(convtranspose, x,
 convtranspose(x::AbstractArray, w::TrackedArray; kw...) = track(convtranspose, x, w, kw...)
 convtranspose(x::TrackedArray, w::AbstractArray; kw...) = track(convtranspose, x, w, kw...)
 
-@grad function convtranspose(x, w; kw...)
+@grad convtranspose(x, w; kw...) =
     convtranspose(data.((x, w))..., kw...), Δ -> nobacksies(:convtranspose, (NNlib.conv(data.((Δ, w))...; kw[1:end-1]...), NNlib.∇conv_filter(data.((x, Δ, w))...; kw[1:end-1]...)))
-end
 
 struct ConvTranspose{N,F,A,V}
     σ::F
