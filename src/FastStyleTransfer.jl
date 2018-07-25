@@ -2,7 +2,7 @@ __precompile__()
 
 module FastStyleTransfer
 
-using Flux, Metalhead, Images, CuArrays, NNlib
+using Flux, Metalhead, Images, CuArrays, NNlib, BSON
 using BSON: @save, @load
 using Flux: @epochs, sub2, expand, initn
 using Base.Iterators: partition
