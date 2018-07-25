@@ -78,15 +78,12 @@ function convtranspose(x, w; stride = 1, pad = 0, dilation = 1, output_pad = 0)
     NNlib.∇conv_data(x, y, w, stride = stride, pad = pad, dilation = dilation)
 end
 
-convtranspose(x::TrackedArray{<:Real,N}, w::TrackedArray{<:Real,N}; kw...) where N =
-    track(convtranspose, x, w, kw...)
-convtranspose(x::AbstractArray{<:Real,N}, w::TrackedArray{<:Real,N}; kw...) where N =
-    track(convtranspose, x, w, kw...)
-convtranspose(x::TrackedArray{<:Real,N}, w::AbstractArray{<:Real,N}; kw...) where N =
-    track(convtranspose, x, w, kw...)
+convtranspose(x::TrackedArray, w::TrackedArray; kw...) = track(convtranspose, x, w, kw...)
+convtranspose(x::AbstractArray, w::TrackedArray; kw...) = track(convtranspose, x, w, kw...)
+convtranspose(x::TrackedArray, w::AbstractArray; kw...) = track(convtranspose, x, w, kw...)
 
 @grad function convtranspose(x, w; kw...)
-    convtranspose(data.((x, w))..., kw...), Δ -> (NNlib.conv(data.((Δ, w))...; kw[1:end-1]...), NNlib.∇conv_filter(data.((x, Δ, w))...; kw[1:end-1]...))
+    convtranspose(data.((x, w))..., kw...), Δ -> nobacksies(:convtranspose, (NNlib.conv(data.((Δ, w))...; kw[1:end-1]...), NNlib.∇conv_filter(data.((x, Δ, w))...; kw[1:end-1]...)))
 end
 
 struct ConvTranspose{N,F,A,V}
