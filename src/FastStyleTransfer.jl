@@ -6,8 +6,7 @@ using Flux, Metalhead, Images, CuArrays, NNlib
 using BSON: @save, @load
 using Flux: @epochs, sub2, expand, initn
 using Base.Iterators: partition
-using Flux.Tracker: track, data, @back
-import Flux.Tracker.back
+using Flux.Tracker: track, data, @grad
 
 export train, stylize
 
