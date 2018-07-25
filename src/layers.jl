@@ -72,7 +72,7 @@ function out_size(stride, pad, dilation, kernel, xdims, output_pad)
     dims
 end
 
-function _convtranspose(x, w; stride = 1, pad = 0, dilation = 1, output_pad = 0)
+function convtranspose(x, w; stride = 1, pad = 0, dilation = 1, output_pad = 0)
     stride, pad, dilation, output_pad = NNlib.padtuple(x, stride), NNlib.padtuple(x, pad), NNlib.padtuple(x, dilation), NNlib.padtuple(x, output_pad)
     y = similar(x, out_size(stride, pad, dilation, size(w)[1:end-2], size(x)[1:end-2], output_pad)...,size(w)[end-1],size(x)[end])
     NNlib.∇conv_data(x, y, w, stride = stride, pad = pad, dilation = dilation)
@@ -86,7 +86,7 @@ convtranspose(x::TrackedArray{<:Real,N}, w::AbstractArray{<:Real,N}; kw...) wher
     track(convtranspose, x, w, kw...)
 
 @grad function convtranspose(x, w; kw...)
-    _convtranspose(x, w, kw...), Δ -> (NNlib.conv(data.((Δ, w))...; kw[1:end-1]...), NNlib.∇conv_filter(data.((x, Δ, w))...; kw[1:end-1]...))
+    convtranspose(data.((x, w))..., kw...), Δ -> (NNlib.conv(data.((Δ, w))...; kw[1:end-1]...), NNlib.∇conv_filter(data.((x, Δ, w))...; kw[1:end-1]...))
 end
 
 struct ConvTranspose{N,F,A,V}
