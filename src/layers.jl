@@ -72,22 +72,21 @@ function out_size(stride, pad, dilation, kernel, xdims, output_pad)
     dims
 end
 
-function _convtranspose(x, w, stride, pad, dilation, output_pad)
+function _convtranspose(x, w; stride = 1, pad = 0, dilation = 1, output_pad = 0)
     stride, pad, dilation, output_pad = NNlib.padtuple(x, stride), NNlib.padtuple(x, pad), NNlib.padtuple(x, dilation), NNlib.padtuple(x, output_pad)
     y = similar(x, out_size(stride, pad, dilation, size(w)[1:end-2], size(x)[1:end-2], output_pad)...,size(w)[end-1],size(x)[end])
     NNlib.∇conv_data(x, y, w, stride = stride, pad = pad, dilation = dilation)
 end
 
-convtranspose(x::TrackedArray{<:Real,N}, w::TrackedArray{<:Real,N}; stride = 1, pad = 0, dilation = 1, output_pad = 0) where N =
-    track(_convtranspose, x, w, stride, pad, dilation, output_pad)
-convtranspose(x::AbstractArray{<:Real,N}, w::TrackedArray{<:Real,N}; stride = 1, pad = 0, dilation = 1, output_pad = 0) where N =
-    track(_convtranspose, x, w, stride, pad, dilation, output_pad)
-convtranspose(x::TrackedArray{<:Real,N}, w::AbstractArray{<:Real,N}; stride = 1, pad = 0, dilation = 1, output_pad = 0) where N =
-    track(_convtranspose, x, w, stride, pad, dilation, output_pad)
+convtranspose(x::TrackedArray{<:Real,N}, w::TrackedArray{<:Real,N}; kw...) where N =
+    track(convtranspose, x, w, kw...)
+convtranspose(x::AbstractArray{<:Real,N}, w::TrackedArray{<:Real,N}; kw...) where N =
+    track(convtranspose, x, w, kw...)
+convtranspose(x::TrackedArray{<:Real,N}, w::AbstractArray{<:Real,N}; kw...) where N =
+    track(convtranspose, x, w, kw...)
 
-function Tracker.back(::typeof(_convtranspose), Δ, x, w, stride, pad, dilation, output_pad)
-    @back(x, NNlib.conv(Δ, data(w); stride = stride, pad = pad, dilation = dilation))
-    @back(w, NNlib.∇conv_filter(data(x), Δ, data(w); stride = stride, pad = pad, dilation = dilation))
+@grad function convtranspose(x, w; kw...)
+    _convtranspose(x, w, kw...), Δ -> (NNlib.conv(data.((Δ, w))...; kw[1:end-1]...), NNlib.∇conv_filter(data.((x, Δ, w))...; kw[1:end-1]...))
 end
 
 struct ConvTranspose{N,F,A,V}
