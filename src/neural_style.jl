@@ -4,7 +4,12 @@
 
 function train(train_data_path, batch_size, η, style_image_path, epochs, model_save_path, content_weight, style_weight, model = TransformerNet; images = 10000)
     train_dataset = load_dataset(train_data_path, batch_size, images)
-    transformer = model() |> gpu
+    try
+        @load model_save_path transformer
+    catch
+        transformer = model()
+    end
+    transformer = transformer |> gpu
     optimizer = Flux.ADAM(params(transformer), η)
     style = load_image(style_image_path, size_img = 224)
     style = repeat(reshape(style, size(style)..., 1), outer = (1,1,1,batch_size)) |> gpu
@@ -46,12 +51,11 @@ function train(train_data_path, batch_size, η, style_image_path, epochs, model_
             Flux.back!(l);
             optimizer()
         end
+        transformer = transformer |> cpu
+        @save model_save_path transformer
+        transformer = transformer |> gpu
+        optimizer = Flux.ADAM(params(transformer), η)
     end
-
-    # NOTE: Model must be brought to device while saving since stylization might be performed on CPU
-    transformer = transformer |> cpu
-
-    @save model_save_path transformer
 end
 
 #----------------------------------Utilities to Stylize Images--------------------------------
