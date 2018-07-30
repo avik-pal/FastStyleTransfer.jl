@@ -21,8 +21,7 @@ function train(train_data_path, batch_size, η, style_image_path, epochs, model_
     function loss_function(x)
         y = transformer(x)
 
-        y = y .- im_mean2
-        x = x .- im_mean2
+        y = y .- im_mean2 # No need to do for x as it is already normalized
 
         features_y = vgg(y)
         features_x = vgg(x)
