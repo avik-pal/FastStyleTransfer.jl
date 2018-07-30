@@ -13,6 +13,7 @@ function train(train_data_path, batch_size, η, style_image_path, epochs, model_
     optimizer = Flux.ADAM(params(transformer), η)
     style = load_image(style_image_path, size_img = 224)
     style = repeat(reshape(style, size(style)..., 1), outer = (1,1,1,batch_size)) |> gpu
+    im_mean2 = reshape([0.485, 0.458, 0.408], (1,1,3,1)) * 255 |> gpu # Reinitialize to avoid gpu error
 
     vgg = vgg19() |> gpu
     features_style = vgg(style)

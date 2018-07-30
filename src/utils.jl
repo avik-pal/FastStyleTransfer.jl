@@ -58,7 +58,7 @@ function gram_matrix(x)
     w, h, ch, b = size(x)
     local features = reshape(x, w*h, ch, b)
     features = [features[:,:,i] for i in 1:b]
-    cat(3, [features[i]' * features[i] for i in 1:b]...) / (w * h * ch)
+    cat(3, [features[i]' * features[i] for i in 1:b]...) / Float32(w * h * ch)
 end
 
 #----------------------------Extension of certain functions------------------------------
