@@ -6,7 +6,7 @@ function train(train_data_path, batch_size, η, style_image_path, epochs, model_
     train_dataset = load_dataset(train_data_path, batch_size, images)
     transformer = model() |> gpu
     optimizer = Flux.ADAM(params(transformer), η)
-    style = load_image(style_image_path, size = 224)
+    style = load_image(style_image_path, size_img = 224)
     style = repeat(reshape(style, size(style)..., 1), outer = (1,1,1,batch_size)) |> gpu
 
     vgg = vgg19() |> gpu
