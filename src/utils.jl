@@ -9,7 +9,7 @@ im_mean2 = reshape([0.485, 0.458, 0.408], (1,1,3,1)) * 255 |> gpu
 function load_image(filename; size_img::Int = -1, scale::Int = -1)
     img = load(filename)
     global original_size = size(img)
-    if size != -1
+    if size_img != -1
         img = imresize(img, (size_img,size_img))
     elseif scale != -1
         dims = size(img, 1)
@@ -22,8 +22,8 @@ end
 
 function save_image(filename, img, display_img::Bool = false)
     img = reshape(img, (size(img, 2), size(img, 1), 3))
-    img = permutedims(img, [3,2,1])
     img = (img .+ im_mean) / 255
+    img = permutedims(img, [3,2,1])
     img -= minimum(img)
     img /= maximum(img)
     img = colorview(RGB{eltype(img)}, img)
