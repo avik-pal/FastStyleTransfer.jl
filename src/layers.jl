@@ -1,69 +1,89 @@
-# The license for this code is available at https://github.com/avik-pal/FastStyleTransfer.jl/blob/master/LICENSE.md
+#----- Instance Normalization -----#
 
-#-------------------Instance Normalization-----------------------------------
-
-# NOTE: The Instance Normalization code is slow and can act as a huge bottleneck.
-# Hence until this issue is fixed we shall be using BatchNorm
-
-struct InstanceNorm
-    β
-    γ
+mutable struct InstanceNorm{F,V,W,N}
+  λ::F  # activation function
+  β::V  # bias
+  γ::V  # scale
+  μ::W  # moving mean
+  σ²::W  # moving var
+  ϵ::N
+  momentum::N
+  active::Bool
 end
 
-Flux.treelike(InstanceNorm)
+@treelike InstanceNorm
 
-InstanceNorm(chs::Int; initβ = zeros, initγ = ones) = InstanceNorm(param(initβ(chs)), param(initγ(chs)))
+InstanceNorm(chs::Integer, λ = identity;
+             initβ = (i) -> zeros(i), initγ = (i) -> ones(i), ϵ = 1e-8, momentum = .1) =
+  InstanceNorm(λ, param(initβ(chs)), param(initγ(chs)),
+               zeros(chs), ones(chs), ϵ, momentum, true)
 
 function (IN::InstanceNorm)(x)
-    local chs = length(IN.β.data)
-    reshape(IN.γ, (1,1,chs,1)) .* ((x .- mean(x, [1,2,3])) ./ std(x, [1,2,3])) .+ reshape(IN.β, (1,1,chs,1))
+    γ, β = BN.γ, BN.β
+    dims = length(size(x))
+    channels = size(x, dims-1)
+    affine_shape = ones(Int, dims)
+    affine_shape[end-1] = channels
+    affine_shape[end] = size(x, dims)
+    m = prod(size(x)[1:end-2])
+
+    if !IN.active
+        μ = reshape(IN.μ, affine_shape...)
+        σ² = reshape(IN.σ², affine_shape...)
+    else
+        T = eltype(x)
+
+        ϵ = data(convert(T, BN.ϵ))
+        axes = [1:dims-2]
+        μ = mean(x, dims = axes)
+        σ² = mean((x .- μ).^2, dims = axes)
+
+        # update moving mean/std
+        mtm = data(convert(T, BN.momentum))
+        IN.μ = (1 - mtm) .* IN.μ .+ mtm .* dropdims(data(μ), dims = (axes...,))
+        IN.σ² = (1 - mtm) .* IN.σ² .+ mtm .* dropdims(data(σ²), dims = (axes...,)) .* m ./ (m - 1)
+    end
+
+    let λ = BN.λ
+        λ.(reshape(γ, affine_shape...) .* ((x .- μ) ./ sqrt.(σ² .+ ϵ)) .+ reshape(β, affine_shape...))
+    end
 end
 
-#---------------------------Residual Block-----------------------------------
+_testmode!(IN::InstanceNorm, test) = (IN.active = !test)
 
-struct ResidualBlock
-    conv_layers
-    norm_layers
+function Base.show(io::IO, l::InstanceNorm)
+  print(io, "InstanceNorm($(join(size(l.β), ", "))")
+  (l.λ == identity) || print(io, ", λ = $(l.λ)")
+  print(io, ")")
 end
 
-Flux.treelike(ResidualBlock)
+#----- Residual Block -----#
 
-ResidualBlock(chs::Int) =
-   ResidualBlock((Conv((3,3), chs=>chs, pad = (1,1)), Conv((3,3), chs=>chs, pad = (1,1))), (BatchNorm(chs), BatchNorm(chs)))
+struct ResidualBlock; layers; end
 
-function (r::ResidualBlock)(x)
-    value = relu.(r.norm_layers[1](r.conv_layers[1](x)))
-    r.norm_layers[2](r.conv_layers[2](value)) + x
+@treelike ResidualBlock
+
+function ResidualBlock(chs::Int, batchnorm)
+    alias = batchnorm ? BatchNorm: InstanceNorm
+    ResidualBlock(Chain(Conv((3, 3), chs=>chs, pad=(1, 1)),
+                        alias(chs, relu),
+                        Conv((3, 3), chs=>chs, pad=(1, 1)),
+                        alias(chs)))
 end
 
-#--------------------------Reflection Pad-------------------------------------
+(r::ResidualBlock)(x) = r.layers(x) .+ x
 
-# Paper suggests using Reflection Padding. However normal padding is being used until this layer is implemented
+#----- Upsample -----#
 
-struct ReflectionPad
-    dim::Int
-end
+Upsample(scale = 2) = x -> repeat(x, inner = (scale, scale, 1, 1))
 
-Flux.treelike(ReflectionPad)
+UpsamplingBlock(kernel, chs; stride = (1, 1), scale = 2, pad = (0, 0)) =
+    Chain(Conv(kernel, chs, stride = stride, pad = pad),
+          Upsample(scale))
 
-#----------------------Convolution Block--------------------------------------
+#----- Conv Transpose -----#
 
-ConvBlock(chs::Pair{<:Int,<:Int}, kernel::Tuple{Int,Int}, stride::Tuple{Int,Int} = (1,1), pad::Tuple{Int,Int} = (0,0)) =
-    Chain(Conv(kernel, chs, stride = stride, pad = pad), ReflectionPad(kernel[1]÷2))
-
-#-------------------------Upsample--------------------------------------------
-
-Upsample(x) = repeat(x, inner = (2,2,1,1))
-
-#----------------------Upsampling BLock---------------------------------------
-
-# TODO: Use reflection padding instead of zero padding once its implemented
-
-UpsamplingBlock(chs::Pair{<:Int,<:Int}, kernel::Tuple{Int,Int}, stride::Tuple{Int,Int}, upsample::Int, pad::Tuple{Int,Int} = (0,0)) =
-    Chain(Conv(kernel, chs, stride = stride, pad = (kernel[1]÷2, kernel[2]÷2)), x -> Upsample(x))
-
-#---------------------Convolution Transpose-----------------------------------
-
+# NOTE: Will soon be in Flux. Remove once that PR is merged
 function out_size(stride, pad, dilation, kernel, xdims, output_pad)
     dims = []
     for i in zip(stride, pad, dilation, kernel, xdims, output_pad)
@@ -97,7 +117,7 @@ end
 
 ConvTranspose(w::AbstractArray{T,N}, b::AbstractVector{T}, σ = identity;
     stride = 1, pad = 0, dilation = 1, output_pad = 0) where {T,N} =
-    ConvTranspose(σ, w, b, expand.(sub2(Val{N}), (stride, pad, dilation, output_pad))...)
+    ConvTranspose(σ, w, b, expand.(sub2(Val(N)), (stride, pad, dilation, output_pad))...)
 
 ConvTranspose(k::NTuple{N,Integer}, ch::Pair{<:Integer,<:Integer}, σ = identity; init = Flux.initn,
     stride = 1, pad = 0, dilation = 1, output_pad = 0) where N =
