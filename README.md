@@ -1,5 +1,7 @@
 # FastStyleTransfer
 
+**NOTE**: This version works for Julia 0.6. An update to support Julia 1.0 and latest Flux, is WIP. Check the julia-1.0 branch for latest updates. It contains working code which needs to be trained. The models for the last release will not work in julia-1.0 branch. But soon new and better pre-trained models will be added.
+
 Implementation of Fast Neural Style Transfer in Julia using Flux.jl
 
 ### Usage
