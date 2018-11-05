@@ -19,14 +19,14 @@ function TransformerNet(;upsample = true, batchnorm = true)
     else
         model = Chain(Conv((3, 3), 3=>32, pad = (1, 1)),
                       alias(32, relu),
-                      Conv((3, 3), 32=>64, stride = (2, 2), pad = (1, 1)),
+                      Conv((4, 4), 32=>64, stride = (2, 2), pad = (1, 1)),
                       alias(64, relu),
-                      Conv((3, 3), 64=>128, stride = (2, 2), pad = (1, 1)),
+                      Conv((4, 4), 64=>128, stride = (2, 2), pad = (1, 1)),
                       alias(128, relu),
                       res_chain...,
-                      ConvTranspose((3, 3), 128=>64, stride = (2, 2), pad = (1, 1), output_pad = (1, 1)),
+                      ConvTranspose((4, 4), 128=>64, stride = (2, 2), pad = (1, 1)),
                       alias(64),
-                      ConvTranspose((3, 3), 64=>32, stride = (2, 2), pad = (1, 1), output_pad = (1, 1)),
+                      ConvTranspose((4, 4), 64=>32, stride = (2, 2), pad = (1, 1)),
                       alias(32),
                       ConvTranspose((3, 3), 32=>3, pad = (1, 1)))
     end

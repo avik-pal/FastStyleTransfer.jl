@@ -10,8 +10,7 @@ export train, stylize
 
 include("utils.jl")
 include("layers.jl")
-include("vgg.jl")
-include("transformer_net.jl")
-include("neural_style.jl")
+include("model.jl")
+include("styletransfer.jl")
 
 end # module

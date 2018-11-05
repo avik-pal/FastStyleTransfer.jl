@@ -44,7 +44,7 @@ function (IN::InstanceNorm)(x)
         IN.σ² = (1 - mtm) .* IN.σ² .+ mtm .* dropdims(data(σ²), dims = (axes...,)) .* m ./ (m - 1)
     end
 
-    let λ = BN.λ
+    let λ = IN.λ
         λ.(reshape(γ, affine_shape...) .* ((x .- μ) ./ sqrt.(σ² .+ ϵ)) .+ reshape(β, affine_shape...))
     end
 end
@@ -52,9 +52,9 @@ end
 _testmode!(IN::InstanceNorm, test) = (IN.active = !test)
 
 function Base.show(io::IO, l::InstanceNorm)
-  print(io, "InstanceNorm($(join(size(l.β), ", "))")
-  (l.λ == identity) || print(io, ", λ = $(l.λ)")
-  print(io, ")")
+    print(io, "InstanceNorm($(join(size(l.β), ", "))")
+    (l.λ == identity) || print(io, ", λ = $(l.λ)")
+    print(io, ")")
 end
 
 #----- Residual Block -----#
@@ -84,17 +84,17 @@ UpsamplingBlock(kernel, chs; stride = (1, 1), scale = 2, pad = (0, 0)) =
 #----- Conv Transpose -----#
 
 # NOTE: Will soon be in Flux. Remove once that PR is merged
-function out_size(stride, pad, dilation, kernel, xdims, output_pad)
+function out_size(stride, pad, dilation, kernel, xdims)
     dims = []
-    for i in zip(stride, pad, dilation, kernel, xdims, output_pad)
-        push!(dims, i[1] * (i[5] - 1) + (i[4] - 1) * i[3] - 2 * i[2] + 1 + i[6])
+    for i in zip(stride, pad, dilation, kernel, xdims)
+        push!(dims, i[1] * (i[5] - 1) + (i[4] - 1) * i[3] - 2 * i[2] + 1)
     end
     dims
 end
 
-function convtranspose(x, w; stride = 1, pad = 0, dilation = 1, output_pad = 0)
-    stride, pad, dilation, output_pad = NNlib.padtuple(x, stride), NNlib.padtuple(x, pad), NNlib.padtuple(x, dilation), NNlib.padtuple(x, output_pad)
-    y = similar(x, out_size(stride, pad, dilation, size(w)[1:end-2], size(x)[1:end-2], output_pad)...,size(w)[end-1],size(x)[end])
+function convtranspose(x, w; stride = 1, pad = 0, dilation = 1)
+    stride, pad, dilation = NNlib.padtuple(x, stride), NNlib.padtuple(x, pad), NNlib.padtuple(x, dilation)
+    y = similar(x, out_size(stride, pad, dilation, size(w)[1:end-2], size(x)[1:end-2])...,size(w)[end-1],size(x)[end])
     NNlib.∇conv_data(x, y, w, stride = stride, pad = pad, dilation = dilation)
 end
 
@@ -103,7 +103,7 @@ convtranspose(x::AbstractArray, w::TrackedArray; kw...) = track(convtranspose, x
 convtranspose(x::TrackedArray, w::AbstractArray; kw...) = track(convtranspose, x, w; kw...)
 
 @grad convtranspose(x, w; kw...) =
-    convtranspose(data.((x, w))...; kw...), Δ -> nobacksies(:convtranspose, (NNlib.conv(data.((Δ, w))...; kw[1:end-1]...), NNlib.∇conv_filter(data.((x, Δ, w))...; kw[1:end-1]...)))
+    convtranspose(data.((x, w))...; kw...), Δ -> nobacksies(:convtranspose, (NNlib.conv(data.((Δ, w))...; kw...), NNlib.∇conv_filter(data.((x, Δ, w))...; kw...)))
 
 struct ConvTranspose{N,F,A,V}
     σ::F
@@ -112,23 +112,22 @@ struct ConvTranspose{N,F,A,V}
     stride::NTuple{N,Int}
     pad::NTuple{N,Int}
     dilation::NTuple{N,Int}
-    output_pad::NTuple{N,Int}
 end
 
 ConvTranspose(w::AbstractArray{T,N}, b::AbstractVector{T}, σ = identity;
-    stride = 1, pad = 0, dilation = 1, output_pad = 0) where {T,N} =
-    ConvTranspose(σ, w, b, expand.(sub2(Val(N)), (stride, pad, dilation, output_pad))...)
+    stride = 1, pad = 0, dilation = 1) where {T,N} =
+    ConvTranspose(σ, w, b, expand.(sub2(Val(N)), (stride, pad, dilation))...)
 
 ConvTranspose(k::NTuple{N,Integer}, ch::Pair{<:Integer,<:Integer}, σ = identity; init = Flux.initn,
-    stride = 1, pad = 0, dilation = 1, output_pad = 0) where N =
+    stride = 1, pad = 0, dilation = 1) where N =
     ConvTranspose(param(init(k..., ch[2], ch[1])), param(zeros(ch[2])), σ,
-                  stride = stride, pad = pad, dilation = dilation, output_pad = output_pad)
+                  stride = stride, pad = pad, dilation = dilation)
 
-Flux.treelike(ConvTranspose)
+@treelike ConvTranspose
 
 function (c::ConvTranspose)(x)
     σ, b = c.σ, reshape(c.bias, map(_->1, c.stride)..., :, 1)
-    σ.(convtranspose(x, c.weight, stride = c.stride, pad = c.pad, dilation = c.dilation, output_pad = c.output_pad) .+ b)
+    σ.(convtranspose(x, c.weight, stride = c.stride, pad = c.pad, dilation = c.dilation) .+ b)
 end
 
 function Base.show(io::IO, l::ConvTranspose)
