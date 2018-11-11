@@ -62,27 +62,38 @@ struct COCODataset
     file_paths
     last_loaded
     batch_size
+    complete
     max_load
 end
 
 function COCODataset(dataset, batch_size = 16, max_load = 16 * 100)
     files = dataset .* readdir(dataset)
-    COCODataset(files, 0, batch_size, max_load)
+    COCODataset(files, 0, batch_size, false, max_load)
+end
+
+function (c::COCODataset)(;size_img = 224)
+    images = []
+    for i in 1:c.max_load
+        img = load_image(c.file_paths[c.last_loaded], size_img = size_img)
+        ndims(img) == 3 ? push!(images, img) : total -= 1 # Hack to avoid errors in case of MSCOCO
+        c.last_loaded = (c.last_loaded + 1) % length(c.file_paths)
+        c.last_loaded == 0 && (c.complete = true; c.last_loaded = 1)
+    end
+    [cat(4, images[i]...) for i in partition(1:total, c.batch_size)]
 end
 
 #----- Style Image Descriptor -----#
 
 struct StyleImage
     img_path
-    model_save_path
     features
     gram_style
 end
 
-function StyleImage(filename, extractor, size_img = 224, model_save_path = "./model.bson")
+function StyleImage(filename, extractor, batch_size, size_img = 224)
     img = load_image(filename, size_img = size_img)
-    img = reshape(img, (:, :, :, 1)) |> gpu
+    img = repeat(reshape(img, (:, :, :, 1), outer = (1, 1, 1, batch_size)) |> gpu
     features = extractor(img)
     gram_style = [gram_matrix(x) for x in features]
-    StyleImage(filename, model_save_path, features, gram_style)
+    StyleImage(filename, features, gram_style)
 end
