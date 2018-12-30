@@ -9,17 +9,23 @@ function train(dataset, style_img, image_path, save_path; batch_size = 16, η = 
         transformer = TransformerNet(upsample = false)
     end
     transformer = transformer |> gpu
-    optimizer = Flux.ADAM(params(transformer), η)
+    ps = params(transformer)
+    optimizer = Flux.ADAM(η)
     extractor = FeatureExtractor() |> gpu
     style = StyleImage(style_img, extractor, batch_size)
-    data = COCODataset(dataset, batch_size)
+    train_data = COCODataset(dataset, batch_size)
 
     function loss_function(y, x, depth::Int = depth)
         features_x = extractor(x)
         features_y = extractor(y)
 
         content_loss = content_weight * Flux.mse(features_x[depth], features_y[depth])
-        style_loss = style_weight * sum(Flux.mse.(style.gram_style, gram_matrix.(features_y)))
+
+        style_loss = 0.0
+        for i in 1:length(style.gram_matrix)
+            style_loss += Flux.mse(style.gram_matrix[i], gram_matrix(features_y[i]))
+        end
+        style_loss *= style_weight
 
         push!(style_loss_arr, data(style_loss |> cpu))
         push!(content_loss_arr, data(content_loss |> cpu))
@@ -32,8 +38,7 @@ function train(dataset, style_img, image_path, save_path; batch_size = 16, η = 
     function stylize_image()
         Flux.testmode!(transformer)
 
-        img = load_image(img_path)
-        img = reshape(img, size(img)..., 1) |> gpu
+        img = load_image(img_path) |> gpu
 
         stylized_img = transformer(img)
         save_image(save_path, data(stylized_img |> cpu), display_img)
@@ -41,8 +46,8 @@ function train(dataset, style_img, image_path, save_path; batch_size = 16, η = 
         Flux.testmode!(transformer, false)
     end
 
-    while data.complete != true
-        train_dataset = data()
+    while train_data.complete != true
+        train_dataset = train_data()
         style_loss_arr = []
         content_loss_arr = []
         @epochs epochs begin
@@ -51,7 +56,7 @@ function train(dataset, style_img, image_path, save_path; batch_size = 16, η = 
                 d = d |> gpu
                 l = loss_function(transformer(d), d)
                 Flux.back!(l)
-                optimizer()
+                Flux.Optimise.update!(optimizer, ps)
             end
             stylize_image()
             println("Running Style Loss : $(mean(style_loss_arr))")

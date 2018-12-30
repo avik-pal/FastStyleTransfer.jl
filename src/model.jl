@@ -1,8 +1,8 @@
 #----- Transformer Net -----#
 
 function TransformerNet(;upsample = true, batchnorm = true)
-    alias = batchnorm ? BatchNorm: InstanceNorm
-    res_chain = batchnorm? [ResidualBlock(128) for i in 1:5] : [ResidualBlock(128, false) for i in 1:5]
+    alias = batchnorm ? BatchNorm : InstanceNorm
+    res_chain =  [ResidualBlock(128, batchnorm) for i in 1:5]
     if upsample
         model = Chain(Conv((3, 3), 3=>32, pad = (1, 1)),
                       alias(32, relu),
@@ -36,17 +36,15 @@ end
 #----- Feature Extractor -----#
 
 struct FeatureExtractor
-    slices::NTuple
+    slices
 end
 
 @treelike FeatureExtractor
 
-function FeatureExtractor(nslice = 4, model = VGG19)
+function FeatureExtractor(nslice::Int = 4, depth_each::Int = 4, model = VGG19)
     extractor = trained(model).layers
-    depth_each = length(extractor) ÷ nslice
-    slices = [extractor[((i - 1) * depth_each + 1):(i * depth_each)] for i in 1:(nslice - 1)]
-    push!(slices, extractor[(nslice - 1) * depth_each + 1:end])
-    FeatureExtractor(tuple(slices))
+    slices = [extractor[((i - 1) * depth_each + 1):(i * depth_each)] for i in 1:nslice]
+    FeatureExtractor(tuple(slices...))
 end
 
 function (f::FeatureExtractor)(x)

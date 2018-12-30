@@ -2,10 +2,12 @@ module FastStyleTransfer
 
 using Flux, Metalhead, Images, CuArrays, NNlib, BSON
 using BSON: @save, @load
-using Flux: @epochs, sub2, expand, initn, @treelike, _testmode!
+using Flux: @epochs, sub2, expand, glorot_uniform, @treelike
+import Flux._testmode!
 using Base.Iterators: partition
 using Flux.Tracker: track, data, @grad, nobacksies
-using LinearAlgebra
+using Statistics
+using ProgressMeter
 
 export train, stylize
 

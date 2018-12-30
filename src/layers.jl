@@ -64,7 +64,7 @@ struct ResidualBlock; layers; end
 @treelike ResidualBlock
 
 function ResidualBlock(chs::Int, batchnorm)
-    alias = batchnorm ? BatchNorm: InstanceNorm
+    alias = batchnorm ? BatchNorm : InstanceNorm
     ResidualBlock(Chain(Conv((3, 3), chs=>chs, pad=(1, 1)),
                         alias(chs, relu),
                         Conv((3, 3), chs=>chs, pad=(1, 1)),
@@ -118,9 +118,9 @@ ConvTranspose(w::AbstractArray{T,N}, b::AbstractVector{T}, σ = identity;
     stride = 1, pad = 0, dilation = 1) where {T,N} =
     ConvTranspose(σ, w, b, expand.(sub2(Val(N)), (stride, pad, dilation))...)
 
-ConvTranspose(k::NTuple{N,Integer}, ch::Pair{<:Integer,<:Integer}, σ = identity; init = Flux.initn,
+ConvTranspose(k::NTuple{N,Integer}, ch::Pair{<:Integer,<:Integer}, σ = identity; init = glorot_uniform,
     stride = 1, pad = 0, dilation = 1) where N =
-    ConvTranspose(param(init(k..., ch[2], ch[1])), param(zeros(ch[2])), σ,
+    ConvTranspose(param(init(k..., ch[2], ch[1])), param(zeros(Float32, ch[2])), σ,
                   stride = stride, pad = pad, dilation = dilation)
 
 @treelike ConvTranspose
